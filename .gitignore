@@ -1,0 +1,40 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.pkl
+*.h5
+
+# macOS metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Large datasets & generated CSV dumps
+*.csv
+*.csv.orig
+*.bak
+*.tmp
+
+# College tutorials & scratch scripts
+2.1.py
+college*.py
+simple_*.py
+matlab_*.py
+sk.py
+transmission_line_encoding.py
+tutorial_*.py
+Tutorial_*.md
+ann_graphs/tutorial*/
+
+# IDE & Editor settings
+.idea/
+.vscode/
+*.swp
+

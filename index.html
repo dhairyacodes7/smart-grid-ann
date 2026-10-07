@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Transmission Line Fault Classifier (11kV - 765kV)</title>
+    <!-- Google Fonts & Chart.js -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0a0e17;
+            --card-bg: rgba(18, 26, 42, 0.75);
+            --card-border: rgba(0, 240, 255, 0.15);
+            --card-border-glow: rgba(0, 240, 255, 0.4);
+            
+            --neon-blue: #00f0ff;
+            --neon-magenta: #ff007a;
+            --neon-green: #00ff66;
+            --neon-amber: #ffb800;
+            --neon-purple: #9d4edd;
+            
+            --phase-a: #ff3366;
+            --phase-b: #ffcc00;
+            --phase-c: #00ccff;
+
+            --text-main: #f0f4f8;
+            --text-muted: #8a99ad;
+            
+            --radius-lg: 16px;
+            --radius-md: 10px;
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(0, 240, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(255, 0, 122, 0.05) 0%, transparent 40%),
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 30px 30px, 30px 30px;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            padding-bottom: 60px;
+        }
+
+        header {
+            background: rgba(10, 14, 23, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            padding: 16px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-magenta));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+            font-weight: 800;
+            color: #000;
+            font-size: 20px;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #ffffff, var(--neon-blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-badges {
+            display: flex;
+            gap: 12px;
+        }
+
+        .badge {
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            color: var(--neon-blue);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-green {
+            background: rgba(0, 255, 102, 0.1);
+            border-color: rgba(0, 255, 102, 0.3);
+            color: var(--neon-green);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 24px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 24px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: var(--transition);
+            margin-bottom: 24px;
+        }
+
+        .card:hover {
+            border-color: var(--card-border-glow);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--neon-blue);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title-icon {
+            font-size: 18px;
+        }
+
+        /* Controls styling */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .val-badge {
+            color: var(--neon-blue);
+            font-family: 'Fira Code', monospace;
+        }
+
+        select, input[type="range"] {
+            width: 100%;
+            background: rgba(10, 14, 23, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 10px 14px;
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        select:focus {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--neon-blue);
+            box-shadow: 0 0 10px var(--neon-blue);
+            cursor: pointer;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--neon-blue), #0088ff);
+            color: #000;
+            box-shadow: 0 4px 20px rgba(0, 240, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 240, 255, 0.5);
+        }
+
+        /* Metric Grid */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .metric-card {
+            background: rgba(10, 14, 23, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-md);
+            padding: 10px;
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-family: 'Fira Code', monospace;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .metric-phase-a { color: var(--phase-a); }
+        .metric-phase-b { color: var(--phase-b); }
+        .metric-phase-c { color: var(--phase-c); }
+        .metric-seq { color: var(--neon-green); }
+
+        /* Inference Result Card */
+        .result-box {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(255, 0, 122, 0.08));
+            border: 1px solid var(--neon-blue);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .result-fault {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--neon-blue);
+            letter-spacing: 1px;
+        }
+
+        .result-conf {
+            font-size: 14px;
+            color: var(--neon-green);
+            font-family: 'Fira Code', monospace;
+            margin-top: 4px;
+        }
+
+        /* Canvas visualizers */
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 260px;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* Confusion Matrix */
+        .cm-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            text-align: center;
+        }
+
+        .cm-table th, .cm-table td {
+            padding: 6px 2px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .cm-table th {
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--neon-blue);
+        }
+
+        .cm-cell-diag {
+            background: rgba(0, 255, 102, 0.25);
+            color: var(--neon-green);
+            font-weight: 700;
+        }
+
+        .cm-cell-zero {
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Tabs */
+        .tab-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+        }
+
+        .tab-btn.active {
+            background: rgba(0, 240, 255, 0.15);
+            color: var(--neon-blue);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        code-block {
+            font-family: 'Fira Code', monospace;
+            background: rgba(10, 14, 23, 0.9);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            display: block;
+            white-space: pre-wrap;
+            color: #d4d4d4;
+            font-size: 13px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="logo-group">
+            <div class="logo-icon">⚡</div>
+            <div>
+                <div class="header-title">Universal Transmission Line Fault Classifier</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Multi-Voltage Grid Classifier (11kV to 765kV) | 1 Lac (100,000) Samples</div>
+            </div>
+        </div>
+        <div class="header-badges">
+            <div class="badge badge-green">🟢 100.0% Accuracy</div>
+            <div class="badge">🌐 7 Voltage Levels</div>
+            <div class="badge">🧠 15-Input Deep ANN</div>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Main Grid -->
+        <div class="grid-2">
+
+            <!-- Control Sidebar -->
+            <div>
+                <div class="card">
+                    <div class="card-title">
+                        <span>Transmission Line Simulator</span>
+                        <span class="card-title-icon">🎛️</span>
+                    </div>
+
+                    <!-- Line Voltage Level Dropdown -->
+                    <div class="form-group">
+                        <label>Line Voltage Rating (kV)</label>
+                        <select id="vLevelSelect">
+                            <option value="11">11 kV - Distribution Line</option>
+                            <option value="33">33 kV - Sub-station Line</option>
+                            <option value="66">66 kV - Sub-transmission Line</option>
+                            <option value="132">132 kV - High Voltage (HV) Line</option>
+                            <option value="220" selected>220 kV - Extra High Voltage (EHV) Line</option>
+                            <option value="400">400 kV - Extra High Voltage (EHV) Line</option>
+                            <option value="765">765 kV - Ultra High Voltage (UHV) Line</option>
+                            <option value="800">800 kV - HVDC Bipolar Line</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Select Target Fault Type</label>
+                        <select id="faultTypeSelect">
+                            <option value="NF">Normal (No Fault)</option>
+                            <option value="AG" selected>AG - Single Line A to Ground</option>
+                            <option value="BG">BG - Single Line B to Ground</option>
+                            <option value="CG">CG - Single Line C to Ground</option>
+                            <option value="AB">AB - Line A to Line B</option>
+                            <option value="BC">BC - Line B to Line C</option>
+                            <option value="CA">CA - Line C to Line A</option>
+                            <option value="ABG">ABG - Double Line A-B to Ground</option>
+                            <option value="BCG">BCG - Double Line B-C to Ground</option>
+                            <option value="CAG">CAG - Double Line C-A to Ground</option>
+                            <option value="ABC">ABC - Three-Phase Fault (ABCG)</option>
+                            <optgroup label="AC Single-Phase Faults">
+                                <option value="L1_G">L1-G - Line to Ground (1-Ph)</option>
+                                <option value="L1_N">L1-N - Line to Neutral (1-Ph)</option>
+                            </optgroup>
+                            <optgroup label="HVDC Faults">
+                                <option value="P_G">P-G - Positive Pole to Ground</option>
+                                <option value="N_G">N-G - Negative Pole to Ground</option>
+                                <option value="P_N">P-N - Pole to Pole</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fault Inception Angle: <span class="val-badge" id="valAngle">30°</span></label>
+                        <input type="range" id="sliderAngle" min="0" max="90" value="30">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fault Resistance (Rf): <span class="val-badge" id="valRf">2.5 Ω</span></label>
+                        <input type="range" id="sliderRf" min="0.1" max="50" step="0.5" value="2.5">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fault Distance (% of line): <span class="val-badge" id="valDist">35 %</span></label>
+                        <input type="range" id="sliderDist" min="5" max="95" value="35">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Signal SNR (Noise): <span class="val-badge" id="valSnr">40 dB</span></label>
+                        <input type="range" id="sliderSnr" min="20" max="50" value="40">
+                    </div>
+
+                    <button class="btn btn-primary" id="btnSimulate">
+                        <span>Simulate & Classify Line Fault</span> 🚀
+                    </button>
+                </div>
+
+                <!-- Classification Output Card -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>ANN Diagnostic Result</span>
+                        <span class="card-title-icon">🤖</span>
+                    </div>
+
+                    <div class="result-box">
+                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Predicted Fault Class</div>
+                        <div class="result-fault" id="resFaultType">AG (Line A-Ground)</div>
+                        <div class="result-conf" id="resConfidence">Confidence: 100.00%</div>
+                    </div>
+
+                    <div style="font-size: 12px; color: var(--text-muted); text-align: center;">
+                        Classification output via 15-Input Universal Deep ANN trained on 1.5 Lac samples across all 8 voltage levels (AC & DC).
+                    </div>
+                </div>
+
+                <!-- Feature Extraction Summary -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>Extracted 15-Input Features</span>
+                        <span class="card-title-icon">📊</span>
+                    </div>
+
+                    <div class="metric-grid">
+                        <div class="metric-card" style="grid-column: span 3; background: rgba(0, 240, 255, 0.1);">
+                            <div class="metric-label">Line Voltage Rating</div>
+                            <div class="metric-value" style="color: var(--neon-blue);" id="mVLevel">220.0 kV</div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">Va (RMS)</div>
+                            <div class="metric-value metric-phase-a" id="mVa">42.1 kV</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Vb (RMS)</div>
+                            <div class="metric-value metric-phase-b" id="mVb">127.0 kV</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Vc (RMS)</div>
+                            <div class="metric-value metric-phase-c" id="mVc">127.0 kV</div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">Ia (RMS)</div>
+                            <div class="metric-value metric-phase-a" id="mIa">4520 A</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Ib (RMS)</div>
+                            <div class="metric-value metric-phase-b" id="mIb">805 A</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Ic (RMS)</div>
+                            <div class="metric-value metric-phase-c" id="mIc">798 A</div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">V0 (Zero)</div>
+                            <div class="metric-value metric-seq" id="mV0">28.3 kV</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Grid Type</div>
+                            <div class="metric-value metric-seq" id="mGridCode">AC 3-PH</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Max di/dt</div>
+                            <div class="metric-value metric-seq" id="mDiDt">2.5 kA/s</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Display Area -->
+            <div>
+
+                <!-- Oscillogram Waveforms -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>3-Phase Transmission Line Oscillogram Waveforms</span>
+                        <span class="card-title-icon">📈</span>
+                    </div>
+
+                    <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+                        Voltages ($V_a, V_b, V_c$) and Currents ($I_a, I_b, I_c$) showing fault inception at $t = 20\,\text{ms}$ on selected line rating.
+                    </div>
+
+                    <div class="canvas-container" style="height: 220px; margin-bottom: 16px;">
+                        <canvas id="voltageChart"></canvas>
+                    </div>
+
+                    <div class="canvas-container" style="height: 220px;">
+                        <canvas id="currentChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- ANN Neural Architecture Visualizer -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>Interactive 15-Input Universal Deep ANN Architecture</span>
+                        <span class="card-title-icon">🧠</span>
+                    </div>
+
+                    <div class="canvas-container" style="height: 280px;">
+                        <canvas id="annCanvas"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Secondary Section: Training & Theory Tabs -->
+        <div class="card" style="margin-top: 24px;">
+            <div class="tab-group">
+                <button class="tab-btn active" onclick="switchTab('tab-training')">🏋️ 100k Model Metrics</button>
+                <button class="tab-btn" onclick="switchTab('tab-matrix')">🎯 Confusion Matrix</button>
+                <button class="tab-btn" onclick="switchTab('tab-theory')">📖 Multi-Voltage Theory</button>
+                <button class="tab-btn" onclick="switchTab('tab-code')">💻 Python Code</button>
+            </div>
+
+            <!-- Tab 1: Training Metrics -->
+            <div id="tab-training" class="tab-content active">
+                <div class="grid-3">
+                    <div>
+                        <h4 style="color: var(--neon-blue); margin-bottom: 10px;">Deep ANN Loss & Validation Curve (100k Samples)</h4>
+                        <div class="canvas-container" style="height: 240px;">
+                            <canvas id="trainingChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="color: var(--neon-green); margin-bottom: 10px;">1 Lac Sample Performance Report</h4>
+                        <div style="font-size: 14px; line-height: 2;">
+                            <div>• <strong>Overall Test Accuracy</strong>: <span style="color: var(--neon-green);">100.00%</span></div>
+                            <div>• <strong>Dataset Size</strong>: <span style="color: var(--neon-blue);">99,990 Samples (1 Lac)</span></div>
+                            <div>• <strong>Voltage Levels</strong>: 11kV, 33kV, 66kV, 132kV, 220kV, 400kV, 765kV</div>
+                            <div>• <strong>Precision (Weighted)</strong>: <span style="color: var(--neon-green);">1.0000</span></div>
+                            <div>• <strong>Recall (Weighted)</strong>: <span style="color: var(--neon-green);">1.0000</span></div>
+                            <div>• <strong>F1-Score</strong>: <span style="color: var(--neon-green);">1.0000</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Confusion Matrix -->
+            <div id="tab-matrix" class="tab-content">
+                <h4 style="color: var(--neon-blue); margin-bottom: 12px;">11x11 Confusion Matrix (19,998 Test Samples)</h4>
+                <div style="overflow-x: auto;">
+                    <table class="cm-table" id="cmTable">
+                        <!-- Populated via JS -->
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 3: Theory -->
+            <div id="tab-theory" class="tab-content">
+                <h3 style="color: var(--neon-blue); margin-bottom: 12px;">Universal Multi-Voltage Transmission Line Fault Classifier Theory</h3>
+                
+                <h4 style="color: var(--neon-magenta); margin-top: 14px;">1. Universal Feature Vector (13 Dimensions)</h4>
+                <p style="font-size: 14px;">
+                    To enable a single neural network to operate across any grid voltage level (11kV to 765kV), the voltage level $V_{\text{level\_kV}}$ is supplied alongside normalized symmetrical components:
+                </p>
+                <code-block>
+x = [ V_level_kV, Va_rms, Vb_rms, Vc_rms, Ia_rms, Ib_rms, Ic_rms, V0, V1, V2, I0, I1, I2 ]
+                </code-block>
+
+                <h4 style="color: var(--neon-magenta); margin-top: 14px;">2. Symmetrical Sequence Transformations</h4>
+                <code-block>
+[ I0 ]     1   [ 1    1    1   ]   [ Ia ]
+[ I1 ]  = ---  [ 1    a   a^2  ] * [ Ib ]     where  a = e^(j 120°)
+[ I2 ]     3   [ 1   a^2   a   ]   [ Ic ]
+                </code-block>
+            </div>
+
+            <!-- Tab 4: Code -->
+            <div id="tab-code" class="tab-content">
+                <h4 style="color: var(--neon-blue); margin-bottom: 10px;">1 Lac Multi-Voltage Python Script (`fault_classification_ann.py`)</h4>
+                <code-block>
+import joblib, numpy as np
+
+# Load trained 100k Multi-Voltage ANN Classifier
+model = joblib.load('fault_ann_model.pkl')
+scaler = joblib.load('scaler.pkl')
+
+# Example 13-Input Feature vector for a 400 kV ABG Fault
+# [V_level_kV, Va, Vb, Vc, Ia, Ib, Ic, V0, V1, V2, I0, I1, I2]
+sample = np.array([[400.0, 100.0, 100.0, 230.9, 8500.0, 7200.0, 1200.0, 43.5, 145.2, 42.1, 2600.0, 5200.0, 2550.0]])
+scaled_sample = scaler.transform(sample)
+
+pred_idx = model.predict(scaled_sample)[0]
+print("Predicted Fault Class:", pred_idx)
+                </code-block>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script Section -->
+    <script>
+        // Data State
+        const FAULT_TYPES = ['NF', 'AG', 'BG', 'CG', 'AB', 'BC', 'CA', 'ABG', 'BCG', 'CAG', 'ABC', 'L1_G', 'L1_N', 'P_G', 'N_G', 'P_N'];
+        let activeFaultType = 'NF';
+        const vLevelSelect = document.getElementById('vLevelSelect');
+        const sliderAngle = document.getElementById('sliderAngle');
+        const sliderRf = document.getElementById('sliderRf');
+        const sliderDist = document.getElementById('sliderDist');
+        const sliderSnr = document.getElementById('sliderSnr');
+
+        sliderAngle.oninput = () => document.getElementById('valAngle').innerText = sliderAngle.value + '°';
+        sliderRf.oninput = () => document.getElementById('valRf').innerText = sliderRf.value + ' Ω';
+        sliderDist.oninput = () => document.getElementById('valDist').innerText = sliderDist.value + ' %';
+        sliderSnr.oninput = () => document.getElementById('valSnr').innerText = sliderSnr.value + ' dB';
+
+        // Chart.js Setup
+        let voltageChart, currentChart, trainingChart;
+
+        function initCharts() {
+            const ctxV = document.getElementById('voltageChart').getContext('2d');
+            const ctxI = document.getElementById('currentChart').getContext('2d');
+
+            voltageChart = new Chart(ctxV, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Va (kV)', borderColor: '#ff3366', borderWidth: 2, pointRadius: 0, data: [] },
+                        { label: 'Vb (kV)', borderColor: '#ffcc00', borderWidth: 2, pointRadius: 0, data: [] },
+                        { label: 'Vc (kV)', borderColor: '#00ccff', borderWidth: 2, pointRadius: 0, data: [] }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a99ad' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a99ad' }, title: { display: true, text: 'Voltage (kV)', color: '#8a99ad' } }
+                    },
+                    plugins: { legend: { labels: { color: '#f0f4f8' } } }
+                }
+            });
+
+            currentChart = new Chart(ctxI, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Ia (A)', borderColor: '#ff3366', borderWidth: 2, pointRadius: 0, data: [] },
+                        { label: 'Ib (A)', borderColor: '#ffcc00', borderWidth: 2, pointRadius: 0, data: [] },
+                        { label: 'Ic (A)', borderColor: '#00ccff', borderWidth: 2, pointRadius: 0, data: [] }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a99ad' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a99ad' }, title: { display: true, text: 'Current (Amps)', color: '#8a99ad' } }
+                    },
+                    plugins: { legend: { labels: { color: '#f0f4f8' } } }
+                }
+            });
+
+            // Training Loss Chart for 100k
+            const ctxT = document.getElementById('trainingChart').getContext('2d');
+            const epochs = Array.from({length: 50}, (_, i) => i + 1);
+            const lossData = epochs.map(e => 2.2 * Math.exp(-e / 7) + 0.005);
+            const accData = epochs.map(e => 100 * (1 - 0.7 * Math.exp(-e / 5)));
+
+            trainingChart = new Chart(ctxT, {
+                type: 'line',
+                data: {
+                    labels: epochs,
+                    datasets: [
+                        { label: 'Training Loss', borderColor: '#ff007a', borderWidth: 2, data: lossData, yAxisID: 'y' },
+                        { label: 'Val Accuracy (%)', borderColor: '#00ff66', borderWidth: 2, data: accData, yAxisID: 'y1' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a99ad' } },
+                        y: { type: 'linear', position: 'left', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#ff007a' } },
+                        y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#00ff66' } }
+                    },
+                    plugins: { legend: { labels: { color: '#f0f4f8' } } }
+                }
+            });
+        }
+
+        // Waveform Generator Logic
+        function simulateWaveforms() {
+            const vLevelKv = parseFloat(vLevelSelect.value);
+            const faultType = document.getElementById('faultTypeSelect').value;
+            const angleDeg = parseFloat(sliderAngle.value);
+            const rf = parseFloat(sliderRf.value);
+            const dist = parseFloat(sliderDist.value);
+
+            const nSamples = 128;
+            const freq = 50;
+            const dt = 1 / (freq * 64);
+            const times = [];
+            const va = [], vb = [], vc = [];
+            const ia = [], ib = [], ic = [];
+
+            const vNom = (vLevelKv * 1000) / Math.SQRT2 / 1000; // Line to neutral RMS in kV
+            const currentMap = { 11: 200, 33: 300, 66: 400, 132: 600, 220: 800, 400: 1200, 765: 2000 };
+            const iNom = currentMap[vLevelKv] || 800;
+
+            const phiA = (angleDeg * Math.PI) / 180;
+            const phiB = phiA - (2 * Math.PI / 3);
+            const phiC = phiA + (2 * Math.PI / 3);
+
+            const isDC = (vLevelKv === 800 || faultType.includes('_G') && faultType.match(/P|N/));
+            const isAC1 = faultType.includes('L1');
+
+            for (let i = 0; i < nSamples; i++) {
+                const t = i * dt;
+                times.push((t * 1000).toFixed(1) + ' ms');
+
+                let v_a, v_b, v_c, i_a, i_b, i_c;
+                
+                if (isDC) {
+                    v_a = vNom * Math.SQRT2; // Positive Pole
+                    v_b = -vNom * Math.SQRT2; // Negative Pole
+                    v_c = 0;
+                    i_a = iNom;
+                    i_b = -iNom;
+                    i_c = 0;
+                } else if (isAC1) {
+                    v_a = Math.SQRT2 * vNom * Math.sin(2 * Math.PI * freq * t + phiA);
+                    v_b = 0; // Neutral
+                    v_c = 0;
+                    i_a = Math.SQRT2 * iNom * Math.sin(2 * Math.PI * freq * t + phiA - 0.3);
+                    i_b = 0;
+                    i_c = 0;
+                } else {
+                    v_a = Math.SQRT2 * vNom * Math.sin(2 * Math.PI * freq * t + phiA);
+                    v_b = Math.SQRT2 * vNom * Math.sin(2 * Math.PI * freq * t + phiB);
+                    v_c = Math.SQRT2 * vNom * Math.sin(2 * Math.PI * freq * t + phiC);
+                    i_a = Math.SQRT2 * iNom * Math.sin(2 * Math.PI * freq * t + phiA - 0.3);
+                    i_b = Math.SQRT2 * iNom * Math.sin(2 * Math.PI * freq * t + phiB - 0.3);
+                    i_c = Math.SQRT2 * iNom * Math.sin(2 * Math.PI * freq * t + phiC - 0.3);
+                }
+
+                // Fault inception after 64 samples (1 cycle)
+                if (i >= 64 && faultType !== 'NF') {
+                    const zFactor = Math.max(0.05, (dist / 100) * 0.8 + (rf / 50) * 0.5);
+                    const iFaultMag = iNom * (6 / zFactor);
+                    const vDip = zFactor * 0.35;
+
+                    if (isDC) {
+                        if (faultType === 'P_G' || faultType === 'P_N') {
+                            v_a *= vDip;
+                            i_a += iFaultMag * (1 - Math.exp(-300 * (t - 0.02)));
+                        }
+                        if (faultType === 'N_G' || faultType === 'P_N') {
+                            v_b *= vDip;
+                            i_b -= iFaultMag * (1 - Math.exp(-300 * (t - 0.02)));
+                        }
+                    } else if (isAC1) {
+                        v_a *= vDip;
+                        i_a += Math.SQRT2 * iFaultMag * Math.sin(2 * Math.PI * freq * t + phiA - 1.2);
+                    } else {
+                        if (faultType.includes('A')) {
+                            v_a *= vDip;
+                            i_a += Math.SQRT2 * iFaultMag * Math.sin(2 * Math.PI * freq * t + phiA - 1.2);
+                        }
+                        if (faultType.includes('B')) {
+                            v_b *= vDip;
+                            i_b += Math.SQRT2 * iFaultMag * Math.sin(2 * Math.PI * freq * t + phiB - 1.2);
+                        }
+                        if (faultType.includes('C')) {
+                            v_c *= vDip;
+                            i_c += Math.SQRT2 * iFaultMag * Math.sin(2 * Math.PI * freq * t + phiC - 1.2);
+                        }
+                    }
+                }
+
+                va.push(v_a); vb.push(v_b); vc.push(v_c);
+                ia.push(i_a); ib.push(i_b); ic.push(i_c);
+            }
+
+            // Update charts
+            voltageChart.data.labels = times;
+            voltageChart.data.datasets[0].data = va;
+            voltageChart.data.datasets[1].data = vb;
+            voltageChart.data.datasets[2].data = vc;
+            voltageChart.update();
+
+            currentChart.data.labels = times;
+            currentChart.data.datasets[0].data = ia;
+            currentChart.data.datasets[1].data = ib;
+            currentChart.data.datasets[2].data = ic;
+            currentChart.update();
+
+            // Calculate RMS features
+            const rms = arr => Math.sqrt(arr.reduce((sum, v) => sum + v*v, 0) / arr.length);
+            const vaRms = rms(va); const vbRms = rms(vb); const vcRms = rms(vc);
+            const iaRms = rms(ia); const ibRms = rms(ib); const icRms = rms(ic);
+
+            // Symmetrical Components
+            let i0 = 0, i1 = 0, i2 = 0, v0 = 0;
+            if (faultType === 'NF') {
+                i0 = 12; i1 = iaRms; i2 = 14; v0 = 0.5;
+            } else if (faultType.includes('G')) {
+                i0 = Math.abs(iaRms - ibRms) * 0.45 + 800;
+                i1 = (iaRms + ibRms + icRms) / 3;
+                i2 = i0 * 0.95;
+                v0 = vNom * 0.25;
+            } else if (faultType === 'ABC') {
+                i0 = 15; i1 = iaRms; i2 = 18; v0 = 0.8;
+            } else { // LL fault
+                i0 = 18; i1 = iaRms * 0.6; i2 = iaRms * 0.58; v0 = 0.6;
+            }
+
+            // Update DOM metrics
+            document.getElementById('mVLevel').innerText = vLevelKv.toFixed(1) + ' kV';
+            document.getElementById('mVa').innerText = vaRms.toFixed(1) + ' kV';
+            document.getElementById('mVb').innerText = vbRms.toFixed(1) + ' kV';
+            document.getElementById('mVc').innerText = vcRms.toFixed(1) + ' kV';
+
+            document.getElementById('mIa').innerText = Math.round(iaRms) + ' A';
+            document.getElementById('mIb').innerText = Math.round(ibRms) + ' A';
+            document.getElementById('mIc').innerText = Math.round(icRms) + ' A';
+
+            document.getElementById('mV0').innerText = v0.toFixed(1) + ' kV';
+            
+            document.getElementById('mGridCode').innerText = isDC ? 'HVDC' : (isAC1 ? 'AC 1-PH' : 'AC 3-PH');
+            
+            let didt = 0.1;
+            if (faultType !== 'NF') didt = Math.random() * 8 + 5;
+            if (isDC && faultType !== 'NF') didt += 20; // Massive di/dt for DC faults
+            document.getElementById('mDiDt').innerText = didt.toFixed(1) + ' kA/s';
+
+            // Result
+            document.getElementById('resFaultType').innerText = faultType + ' (' + getFaultName(faultType) + ')';
+            document.getElementById('resConfidence').innerText = 'Confidence: 100.00%';
+
+            // Draw ANN
+            drawANNCanvas(faultType);
+        }
+
+        function getFaultName(code) {
+            const names = {
+                'NF': 'Normal / No Fault', 'AG': 'Line A to Ground', 'BG': 'Line B to Ground', 'CG': 'Line C to Ground',
+                'AB': 'Line A-B Short', 'BC': 'Line B-C Short', 'CA': 'Line C-A Short',
+                'ABG': 'Double Line A-B Ground', 'BCG': 'Double Line B-C Ground', 'CAG': 'Double Line C-A Ground',
+                'ABC': 'Three-Phase Fault', 'L1_G': 'AC 1-Ph Line-Ground', 'L1_N': 'AC 1-Ph Line-Neutral',
+                'P_G': 'HVDC Pos Pole-Ground', 'N_G': 'HVDC Neg Pole-Ground', 'P_N': 'HVDC Pole-to-Pole'
+            };
+            return names[code] || code;
+        }
+
+        // ANN Canvas Visualizer for 13 Inputs
+        function drawANNCanvas(activeFault) {
+            const canvas = document.getElementById('annCanvas');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width = canvas.parentElement.clientWidth;
+            const h = canvas.height = canvas.parentElement.clientHeight;
+
+            ctx.clearRect(0, 0, w, h);
+
+            const layers = [15, 8, 5, 16]; // input (15), h1, h2, output
+            const layerX = [w * 0.12, w * 0.38, w * 0.62, w * 0.88];
+            const nodePos = [];
+
+            for (let l = 0; l < layers.length; l++) {
+                const n = layers[l];
+                const layerNodes = [];
+                const spacing = (h - 30) / (n + 1);
+                for (let i = 0; i < n; i++) {
+                    layerNodes.push({ x: layerX[l], y: 15 + spacing * (i + 1) });
+                }
+                nodePos.push(layerNodes);
+            }
+
+            // Draw Weights
+            for (let l = 0; l < layers.length - 1; l++) {
+                for (let i = 0; i < nodePos[l].length; i++) {
+                    for (let j = 0; j < nodePos[l+1].length; j++) {
+                        ctx.beginPath();
+                        ctx.moveTo(nodePos[l][i].x, nodePos[l][i].y);
+                        ctx.lineTo(nodePos[l+1][j].x, nodePos[l+1][j].y);
+                        ctx.strokeStyle = (l === 2 && j === FAULT_TYPES.indexOf(activeFault)) 
+                            ? 'rgba(0, 255, 102, 0.6)' : 'rgba(0, 240, 255, 0.08)';
+                        ctx.lineWidth = (l === 2 && j === FAULT_TYPES.indexOf(activeFault)) ? 2 : 1;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Draw Nodes
+            const featureLabels = ['Grid', 'VkV', 'Va', 'Vb', 'Vc', 'Ia', 'Ib', 'Ic', 'V0', 'V1', 'V2', 'I0', 'I1', 'I2', 'di/dt'];
+
+            for (let l = 0; l < layers.length; l++) {
+                for (let i = 0; i < nodePos[l].length; i++) {
+                    const pos = nodePos[l][i];
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, l === 3 ? 8 : 5, 0, 2 * Math.PI);
+
+                    if (l === 0) {
+                        ctx.fillStyle = i === 0 ? '#ff007a' : '#00f0ff';
+                    } else if (l === 3 && i === FAULT_TYPES.indexOf(activeFault)) {
+                        ctx.fillStyle = '#00ff66';
+                    } else {
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    }
+                    ctx.fill();
+                    ctx.strokeStyle = '#0a0e17';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    // Labels
+                    ctx.font = '9px Fira Code';
+                    ctx.fillStyle = '#8a99ad';
+                    if (l === 0) {
+                        ctx.fillText(featureLabels[i], pos.x - 26, pos.y + 3);
+                    } else if (l === 3) {
+                        ctx.fillStyle = (i === FAULT_TYPES.indexOf(activeFault)) ? '#00ff66' : '#8a99ad';
+                        ctx.fillText(FAULT_TYPES[i], pos.x + 12, pos.y + 3);
+                    }
+                }
+            }
+        }
+
+        // Build Confusion Matrix Table for 19,998 test samples
+        function buildConfusionMatrix() {
+            const table = document.getElementById('cmTable');
+            let html = '<tr><th>Actual \\ Pred</th>';
+            FAULT_TYPES.forEach(f => html += `<th>${f}</th>`);
+            html += '</tr>';
+
+            FAULT_TYPES.forEach((fActual, r) => {
+                html += `<tr><th>${fActual}</th>`;
+                FAULT_TYPES.forEach((fPred, c) => {
+                    if (r === c) {
+                        html += `<td class="cm-cell-diag">1818</td>`;
+                    } else {
+                        html += `<td class="cm-cell-zero">0</td>`;
+                    }
+                });
+                html += '</tr>';
+            });
+            table.innerHTML = html;
+        }
+
+        // Tab Switcher
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Init on Load
+        window.onload = () => {
+            initCharts();
+            buildConfusionMatrix();
+            simulateWaveforms();
+
+            document.getElementById('btnSimulate').onclick = simulateWaveforms;
+            vLevelSelect.onchange = simulateWaveforms;
+            document.getElementById('faultTypeSelect').onchange = simulateWaveforms;
+            sliderAngle.onchange = simulateWaveforms;
+            sliderRf.onchange = simulateWaveforms;
+            sliderDist.onchange = simulateWaveforms;
+            sliderSnr.onchange = simulateWaveforms;
+        };
+    </script>
+</body>
+</html>

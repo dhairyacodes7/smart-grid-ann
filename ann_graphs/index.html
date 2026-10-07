@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANN Electricity Load Prediction — Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-card: rgba(17, 24, 45, 0.85);
+            --bg-card-hover: rgba(22, 32, 60, 0.95);
+            --border-card: rgba(99, 128, 255, 0.12);
+            --accent-blue: #6366f1;
+            --accent-cyan: #22d3ee;
+            --accent-emerald: #34d399;
+            --accent-amber: #fbbf24;
+            --accent-rose: #fb7185;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --glow-blue: rgba(99, 102, 241, 0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated gradient background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 20%, rgba(34, 211, 238, 0.06) 0%, transparent 50%),
+                        radial-gradient(ellipse at 50% 80%, rgba(52, 211, 153, 0.05) 0%, transparent 50%);
+            animation: bgShift 20s ease-in-out infinite alternate;
+            z-index: 0;
+        }
+
+        @keyframes bgShift {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-5%, -3%); }
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ── Header ── */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .header__badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 1rem;
+            border-radius: 999px;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            color: var(--accent-blue);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 1rem;
+        }
+
+        .header__badge .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent-emerald);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6); }
+            50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-cyan) 50%, var(--accent-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* ── Metric Cards ── */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(20px);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .metric-card:nth-child(1)::before { background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan)); }
+        .metric-card:nth-child(2)::before { background: linear-gradient(90deg, var(--accent-emerald), #a7f3d0); }
+        .metric-card:nth-child(3)::before { background: linear-gradient(90deg, var(--accent-amber), #fde68a); }
+        .metric-card:nth-child(4)::before { background: linear-gradient(90deg, var(--accent-rose), #fda4af); }
+
+        .metric-card:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .metric-card__label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-card__value {
+            font-size: 2rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .metric-card:nth-child(1) .metric-card__value { color: var(--accent-cyan); }
+        .metric-card:nth-child(2) .metric-card__value { color: var(--accent-emerald); }
+        .metric-card:nth-child(3) .metric-card__value { color: var(--accent-amber); }
+        .metric-card:nth-child(4) .metric-card__value { color: var(--accent-rose); }
+
+        .metric-card__unit {
+            font-size: 0.85rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* ── Architecture Card ── */
+        .arch-section {
+            margin-bottom: 2.5rem;
+            animation: fadeInUp 0.8s ease 0.3s both;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .section-title .icon { font-size: 1.3rem; }
+
+        .arch-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(20px);
+        }
+
+        .arch-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .arch-node {
+            padding: 0.7rem 1.2rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .arch-node:hover {
+            transform: scale(1.08);
+        }
+
+        .arch-node--input {
+            background: rgba(34, 211, 238, 0.12);
+            border: 1px solid rgba(34, 211, 238, 0.3);
+            color: var(--accent-cyan);
+        }
+
+        .arch-node--hidden {
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: var(--accent-blue);
+        }
+
+        .arch-node--output {
+            background: rgba(52, 211, 153, 0.12);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            color: var(--accent-emerald);
+        }
+
+        .arch-arrow {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        .arch-details {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .arch-detail {
+            text-align: center;
+        }
+
+        .arch-detail__label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .arch-detail__value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+
+        /* ── Plot Cards ── */
+        .plots-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .plots-grid--two {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .plot-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .plot-card:hover {
+            border-color: rgba(99, 128, 255, 0.25);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+        }
+
+        .plot-card__header {
+            padding: 1.25rem 1.5rem 0.75rem;
+        }
+
+        .plot-card__title {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .plot-card__subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        .plot-card__img {
+            width: 100%;
+            display: block;
+            padding: 0 1rem 1rem;
+            border-radius: 0 0 16px 16px;
+        }
+
+        /* ── Dataset Table ── */
+        .table-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(20px);
+            overflow-x: auto;
+            margin-bottom: 2.5rem;
+            animation: fadeInUp 0.8s ease 0.5s both;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        td {
+            padding: 0.65rem 1rem;
+            font-size: 0.9rem;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        tr:hover td { color: var(--text-primary); background: rgba(255, 255, 255, 0.02); }
+
+        .tag {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .tag--input { background: rgba(34, 211, 238, 0.12); color: var(--accent-cyan); }
+        .tag--target { background: rgba(52, 211, 153, 0.12); color: var(--accent-emerald); }
+
+        /* ── Footer ── */
+        .footer {
+            text-align: center;
+            padding: 2rem 0 1rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* ── Animations ── */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stagger-1 { animation: fadeInUp 0.8s ease 0.35s both; }
+        .stagger-2 { animation: fadeInUp 0.8s ease 0.45s both; }
+        .stagger-3 { animation: fadeInUp 0.8s ease 0.55s both; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+            .plots-grid--two { grid-template-columns: 1fr; }
+            .header h1 { font-size: 1.75rem; }
+            .arch-flow { flex-direction: column; }
+            .arch-arrow { transform: rotate(90deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header__badge">
+                <span class="dot"></span>
+                Model Trained Successfully
+            </div>
+            <h1>ANN Electricity Load Prediction</h1>
+            <p>Keras Sequential model trained on 1,000 synthetic samples to predict electrical load from time, temperature, and historical data</p>
+        </header>
+
+        <!-- Metric Cards -->
+        <section class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-card__label">Mean Absolute Error</div>
+                <div class="metric-card__value">9.93</div>
+                <div class="metric-card__unit">KW</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__label">R² Score</div>
+                <div class="metric-card__value">0.767</div>
+                <div class="metric-card__unit">76.7% variance explained</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__label">RMSE</div>
+                <div class="metric-card__value">12.30</div>
+                <div class="metric-card__unit">KW</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__label">MSE</div>
+                <div class="metric-card__value">151.35</div>
+                <div class="metric-card__unit">KW²</div>
+            </div>
+        </section>
+
+        <!-- Model Architecture -->
+        <section class="arch-section">
+            <h2 class="section-title"><span class="icon">🧠</span> Model Architecture</h2>
+            <div class="arch-card">
+                <div class="arch-flow">
+                    <div class="arch-node arch-node--input">Input<br><small>4 features</small></div>
+                    <span class="arch-arrow">→</span>
+                    <div class="arch-node arch-node--hidden">Dense 64<br><small>ReLU</small></div>
+                    <span class="arch-arrow">→</span>
+                    <div class="arch-node arch-node--hidden">Dense 32<br><small>ReLU</small></div>
+                    <span class="arch-arrow">→</span>
+                    <div class="arch-node arch-node--hidden">Dense 16<br><small>ReLU</small></div>
+                    <span class="arch-arrow">→</span>
+                    <div class="arch-node arch-node--hidden">Dense 8<br><small>ReLU</small></div>
+                    <span class="arch-arrow">→</span>
+                    <div class="arch-node arch-node--output">Output<br><small>1 (Load)</small></div>
+                </div>
+                <div class="arch-details">
+                    <div class="arch-detail">
+                        <div class="arch-detail__label">Optimizer</div>
+                        <div class="arch-detail__value">Adam</div>
+                    </div>
+                    <div class="arch-detail">
+                        <div class="arch-detail__label">Loss</div>
+                        <div class="arch-detail__value">MSE</div>
+                    </div>
+                    <div class="arch-detail">
+                        <div class="arch-detail__label">Epochs</div>
+                        <div class="arch-detail__value">100</div>
+                    </div>
+                    <div class="arch-detail">
+                        <div class="arch-detail__label">Batch Size</div>
+                        <div class="arch-detail__value">64</div>
+                    </div>
+                    <div class="arch-detail">
+                        <div class="arch-detail__label">Train / Test</div>
+                        <div class="arch-detail__value">800 / 200</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Plots -->
+        <section class="stagger-1">
+            <h2 class="section-title"><span class="icon">📊</span> Visualizations</h2>
+            <div class="plots-grid">
+                <div class="plot-card">
+                    <div class="plot-card__header">
+                        <div class="plot-card__title">Electrical Load Over Time</div>
+                        <div class="plot-card__subtitle">First 100 samples from the generated dataset</div>
+                    </div>
+                    <img class="plot-card__img" src="plot1_load_over_time.png" alt="Load over time">
+                </div>
+            </div>
+            <div class="plots-grid plots-grid--two">
+                <div class="plot-card">
+                    <div class="plot-card__header">
+                        <div class="plot-card__title">Training & Validation Loss</div>
+                        <div class="plot-card__subtitle">MSE loss over 100 epochs — still converging</div>
+                    </div>
+                    <img class="plot-card__img" src="plot2_training_loss.png" alt="Training loss">
+                </div>
+                <div class="plot-card">
+                    <div class="plot-card__header">
+                        <div class="plot-card__title">Actual vs Predicted Load</div>
+                        <div class="plot-card__subtitle">First 50 test samples — predicted values track actuals</div>
+                    </div>
+                    <img class="plot-card__img" src="plot3_actual_vs_predicted.png" alt="Actual vs Predicted">
+                </div>
+            </div>
+        </section>
+
+        <!-- Dataset Info -->
+        <section class="stagger-2">
+            <h2 class="section-title"><span class="icon">📋</span> Dataset Features</h2>
+            <div class="table-card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Type</th>
+                            <th>Range</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Hours</td>
+                            <td><span class="tag tag--input">Input</span></td>
+                            <td>0 — 23</td>
+                            <td>Hour of the day</td>
+                        </tr>
+                        <tr>
+                            <td>Day</td>
+                            <td><span class="tag tag--input">Input</span></td>
+                            <td>1 — 7</td>
+                            <td>Day of the week</td>
+                        </tr>
+                        <tr>
+                            <td>Temperature</td>
+                            <td><span class="tag tag--input">Input</span></td>
+                            <td>20 — 40 °C</td>
+                            <td>Ambient temperature</td>
+                        </tr>
+                        <tr>
+                            <td>Previous Load</td>
+                            <td><span class="tag tag--input">Input</span></td>
+                            <td>100 — 200 KW</td>
+                            <td>Historical load reading</td>
+                        </tr>
+                        <tr>
+                            <td>Load</td>
+                            <td><span class="tag tag--target">Target</span></td>
+                            <td>~80 — 250 KW</td>
+                            <td>0.6 × PrevLoad + 2 × Hours + 1.5 × Temp + 3 × Day + noise</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            ANN Load Prediction Dashboard · Built with TensorFlow/Keras · 1,000 samples · 100 epochs
+        </footer>
+    </div>
+</body>
+</html>
